@@ -2,7 +2,7 @@ import gym
 import os
 from stable_baselines3 import A2C, DDPG, TD3, SAC, PPO
 from stable_baselines3.common.env_util import make_vec_env
-from snake_game import SnakeEnv
+from agent_game import MonitorEnv
 import numpy as np
 import tensorboard
 
@@ -61,7 +61,7 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 # PPO training
 log_dir = "ppo_logs/"
 os.makedirs(log_dir, exist_ok=True)
-env = SnakeEnv()
+env = MonitorEnv()
 env = Monitor(env, log_dir)
 
 print("PPO_run...")
@@ -73,7 +73,7 @@ model.learn(total_timesteps=5e6, tb_log_name="PPO_run", callback=callback, progr
 # A2C training
 log_dir = "a2c_logs/"
 os.makedirs(log_dir, exist_ok=True)
-env = SnakeEnv()
+env = MonitorEnv()
 env = Monitor(env, log_dir)
 
 print("A2C_run...")
@@ -86,7 +86,7 @@ model.learn(total_timesteps=5e6, tb_log_name="A2C_run", callback=callback, progr
 # DDPG training
 log_dir = "ddpg_logs/"
 os.makedirs(log_dir, exist_ok=True)
-env = SnakeEnv()
+env = MonitorEnv()
 env = Monitor(env, log_dir)
 
 n_actions = env.action_space.shape[-1]
@@ -101,7 +101,7 @@ model.learn(total_timesteps=5e6, tb_log_name="DDPG_run", callback=callback, prog
 # TD3 training
 log_dir = "td3_logs/"
 os.makedirs(log_dir, exist_ok=True)
-env = SnakeEnv()
+env = MonitorEnv()
 env = Monitor(env, log_dir)
 
 n_actions = env.action_space.shape[-1]
@@ -116,7 +116,7 @@ model.learn(total_timesteps=5e6, tb_log_name="TD3_run", callback=callback, progr
 # SAC training
 log_dir = "sac_logs/"
 os.makedirs(log_dir, exist_ok=True)
-env = SnakeEnv()
+env = MonitorEnv()
 env = Monitor(env, log_dir)
 
 print("SAC_run...")
