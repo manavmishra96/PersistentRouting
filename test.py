@@ -3,7 +3,7 @@ import argparse
 import os
 from stable_baselines3 import A2C, PPO, DQN
 from stable_baselines3.common.monitor import Monitor
-from snake_game_new import SnakeEnv
+from snake_one_apple import SnakeOneAppleEnv
 
 
 def parse_args():
@@ -23,8 +23,8 @@ def evaluate_model(model, env):
         step_num += 1
         action, _ = model.predict(obs)
         obs, reward, done, _ = env.step(action)
-        print(f"Step: {step_num}, Action: {action}, Snake Position: {env.snake_position}, Reward: {reward}")
-        env.render('video')
+        print(f"Step: {step_num}, Action: {action}, Snake Position: {env.snake_pos}, Reward: {reward}")
+        env.render('human')
         # env.save_video()
         total_reward = reward
     return total_reward
@@ -34,7 +34,7 @@ def evaluate_model(model, env):
 if __name__ == "__main__":
     args = parse_args()
 
-    env = SnakeEnv()
+    env = SnakeOneAppleEnv()
     # vec_env = VecMonitor(env)
     # AttributeError: 'SnakeEnv' object has no attribute 'num_envs'
 
