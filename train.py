@@ -1,9 +1,10 @@
 import gym
 import os
+import numpy as np
 import argparse
 from stable_baselines3 import A2C, PPO, DQN
 from stable_baselines3.common.env_util import make_vec_env
-from Snakega
+from snake_game import SnakeEnv
 import wandb
 import tensorboard 
 
@@ -71,7 +72,7 @@ if args.model == "ppo":
   wandb.init(project='Persistent Routing', name='PPO', sync_tensorboard=True)
   log_dir = "ppo_logs/"
   os.makedirs(log_dir, exist_ok=True)
-  env = SnakeOneAppleEnv()
+  env = SnakeEnv()
   env = Monitor(env, log_dir)
    
   print("PPO_run...")
@@ -85,7 +86,7 @@ elif args.model == "a2c":
   wandb.init(project='Persistent Routing', name='A2C', sync_tensorboard=True)
   log_dir = "a2c_logs/"
   os.makedirs(log_dir, exist_ok=True)
-  env = SnakeOneAppleEnv()
+  env = SnakeEnv()
   env = Monitor(env, log_dir)
 
   print("A2C_run...")
@@ -100,7 +101,7 @@ elif args.model == "dqn":
   wandb.init(project='Persistent Routing', name='DQN', sync_tensorboard=True)
   log_dir = "dqn_logs/"
   os.makedirs(log_dir, exist_ok=True)
-  env = SnakeOneAppleEnv()
+  env = SnakeEnv()
   env = Monitor(env, log_dir)
 
   print("DQN_run...")

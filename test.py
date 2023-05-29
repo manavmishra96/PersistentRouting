@@ -3,7 +3,7 @@ import argparse
 import os
 from stable_baselines3 import A2C, PPO, DQN
 from stable_baselines3.common.monitor import Monitor
-from snake_one_apple import SnakeOneAppleEnv
+from snake_game import SnakeEnv
 
 
 def parse_args():
@@ -34,7 +34,7 @@ def evaluate_model(model, env):
 if __name__ == "__main__":
     args = parse_args()
 
-    env = SnakeOneAppleEnv()
+    env = SnakeEnv()
     # vec_env = VecMonitor(env)
     # AttributeError: 'SnakeEnv' object has no attribute 'num_envs'
 
