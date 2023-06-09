@@ -2,16 +2,12 @@ import gym
 import os
 import numpy as np
 import argparse
-from stable_baselines3 import A2C, PPO, DQN
-from stable_baselines3.common.env_util import make_vec_env
-from snake_game import SnakeEnv
 import wandb
-import tensorboard 
-
-from stable_baselines3.common import results_plotter
+from snake_game import SnakeGame
+from stable_baselines3 import PPO, A2C
+from stable_baselines3.dqn import DQN
 from stable_baselines3.common.monitor import Monitor
-from stable_baselines3.common.results_plotter import load_results, ts2xy, plot_results
-from stable_baselines3.common.noise import NormalActionNoise
+from stable_baselines3.common.results_plotter import load_results, ts2xy
 from stable_baselines3.common.callbacks import BaseCallback
 
 
@@ -59,52 +55,38 @@ class SaveOnBestTrainingRewardCallback(BaseCallback):
 
         return True
 
-
 def parse_args():
    parser = argparse.ArgumentParser()
-   parser.add_argument('--model', type=str, default="ppo", help='ppo or a2c or dqn')
+   parser.add_argument('--model', type=str, default='ppo', help='ppo or a2c or dqn')
    return parser.parse_args()
 
 args = parse_args()
+env = SnakeGame()
 
-if args.model == "ppo":
-  # PPO training
+if args.model == 'ppo':
   wandb.init(project='Persistent Routing', name='PPO', sync_tensorboard=True)
-  log_dir = "ppo_logs/"
+  log_dir = "logs/ppo_logs/"
   os.makedirs(log_dir, exist_ok=True)
-  env = SnakeEnv()
   env = Monitor(env, log_dir)
-   
-  print("PPO_run...")
-  model = PPO("MlpPolicy", env, verbose=1, tensorboard_log="./tb_logs/")
+  print("PPO_Training................................")
   callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
-  model.learn(total_timesteps=5e6, tb_log_name="PPO_run", callback=callback, progress_bar=True)
-  
-  
-elif args.model == "a2c":
-  # A2C training
-  wandb.init(project='Persistent Routing', name='A2C', sync_tensorboard=True)
-  log_dir = "a2c_logs/"
-  os.makedirs(log_dir, exist_ok=True)
-  env = SnakeEnv()
-  env = Monitor(env, log_dir)
-
-  print("A2C_run...")
-  model = A2C("MlpPolicy", env, verbose=1, tensorboard_log="./tb_logs/")
-  callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
-  model.learn(total_timesteps=5e6, tb_log_name="A2C_run", callback=callback, progress_bar=True)
-
-# # model.learn(total_timesteps=10_000, tb_log_name="second_run", reset_num_timesteps=False)
-
-elif args.model == "dqn":
-  # DQN training
-  wandb.init(project='Persistent Routing', name='DQN', sync_tensorboard=True)
-  log_dir = "dqn_logs/"
-  os.makedirs(log_dir, exist_ok=True)
-  env = SnakeEnv()
-  env = Monitor(env, log_dir)
-
-  print("DQN_run...")
-  model = DQN("MlpPolicy", env, verbose=1, tensorboard_log="./tb_logs/")
-  callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
-  model.learn(total_timesteps=5e6, tb_log_name="DQN_run", callback=callback, progress_bar=True)
+  model = PPO("MultiInputPolicy", env, verbose=1, tensorboard_log="./tb_logs")
+  model.learn(total_timesteps=int(5e6), tb_log_name="PPO_run", callback=callback, progress_bar=True)
+elif args.model == 'a2c':
+   wandb.init(project='Persistent Routing', name='A2C', sync_tensorboard=True)
+   log_dir = "logs/a2c_logs/"
+   os.makedirs(log_dir, exist_ok=True)
+   env = Monitor(env, log_dir)
+   print("A2C_Training................................")
+   callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
+   model = A2C("MultiInputPolicy", env, verbose=1, tensorboard_log="./tb_logs")
+   model.learn(total_timesteps=int(5e6), tb_log_name="A2C_run", callback=callback, progress_bar=True)
+elif args.model == 'DQN':
+   wandb.init(project='Persistent Routing', name='DQN', sync_tensorboard=True)
+   log_dir = "logs/dqn_logs/"
+   os.makedirs(log_dir, exist_ok=True)
+   env = Monitor(env, log_dir)
+   print("DQN_Training................................")
+   callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
+   model = DQN("MultiInputPolicy", env, verbose=1, tensorboard_log="./tb_logs")
+   model.learn(total_timesteps=int(5e6), tb_log_name="DQN_run", callback=callback, progress_bar=True)

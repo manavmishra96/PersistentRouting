@@ -1,118 +1,156 @@
 import gym
-import os
-import matplotlib.pyplot as plt
-import numpy as np
 from gym import spaces
+import os
+import numpy as np
+import matplotlib.pyplot as plt
 from stable_baselines3.common.env_checker import check_env
 
+class SnakeGame(gym.Env):
+    metadata = {"render_modes": ["human", "rgb_array"]}
 
-class SnakeEnv(gym.Env):
-    metadata = {'render modes': ['human']}
+    def __init__(self, size=40):
+        """
+        Initialize the SnakeGame environment.
 
-    def __init__(self, width=40, height=40, num_apples=1):
-        super(SnakeEnv, self).__init__()
-        self.height = height
-        self.width = width
-        self.num_apples = num_apples
+        Args:
+            size (int): The size of the game grid.
+        """
+        super(SnakeGame, self).__init__()
         self.steps = 0
         self.game_over = False
-        self.snake_position = [self.width // 2, self.height // 2]
-        self.apple_position = self._generate_apple()
+        self.size = size
+        # Observation are dictionaries with the snake's and the apple's location.
+        self.observation_space = spaces.Dict(
+            {
+                "snake": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+                "apple": spaces.Box(0, size - 1, shape=(2,), dtype=int),
+            }
+        )
         self.action_space = spaces.Discrete(4)
-        self.observation_space = spaces.Box(low=0, high=40, shape=(3,), dtype=np.uint8)
 
-    
+    def _get_obs(self):
+        """
+        Get the current observation of the environment.
+
+        Returns:
+            dict: Dictionary containing the snake's and the apple's location.
+        """
+        return {"snake": self._snake_position, "apple": self._apple_position}
+
+    def _get_info(self):
+        """
+        Get additional information about the environment.
+
+        Returns:
+            dict: Dictionary containing the distance between snake and apple.
+        """
+        return {"distance": np.linalg.norm(self._snake_position - self._apple_position, ord=1)}
+
     def reset(self):
-        self.steps = 0
+        """
+        Reset the environment to its initial state.
+
+        Returns:
+            dict: Initial observation of the environment.
+        """
         self.game_over = False
-        self.snake_position = [self.width // 2, self.height // 2]
-        #code for generating apple
-        self.apple_position = self._generate_apple()
-        return self._get_states()
-    
+        self._snake_position = np.array([self.size // 2, self.size // 2])
+        self._apple_position = np.array([np.random.randint(0, self.size), np.random.randint(0, self.size)])
+
+        obs = self._get_obs()
+
+        return obs
+
     def step(self, action):
+        """
+        Take a step in the environment based on the given action.
+
+        Args:
+            action (int): The action to take.
+
+        Returns:
+            tuple: Tuple containing the next observation, reward, done flag, and additional information.
+        """
         self.steps += 1
-        if not self.game_over:
-            if action == 0:
-                self.snake_position[0] -= 1
-            elif action == 1:
-                self.snake_position[0] += 1
-            elif action == 2:
-                self.snake_position[1] -= 1
-            elif action == 3:
-                self.snake_position[1] += 1
-        
-        if self.snake_position[0] < 0 or self.snake_position[0] > self.width \
-        or self.snake_position[1] < 0 or self.snake_position[1] > self.height\
-            or len(self.apple_position) == 0:
+        if action == 0:
+            self._snake_position[0] += 1  # right
+        elif action == 1:
+            self._snake_position[1] += 1  # up
+        elif action == 2:
+            self._snake_position[0] -= 1  # left
+        elif action == 3:
+            self._snake_position[1] -= 1  # down
+
+        # Check if game is over and calculate the score
+        if np.array_equal(self._snake_position, self._apple_position):
             self.game_over = True
-        
-        obs = self._get_states()
-        reward = -abs(self.snake_position[0] - self.apple_position[0][0]) - abs(self.snake_position[1] - self.apple_position[0][1])
-        if self.snake_position == self.apple_position[0]:
-            reward = 1
+            score = 0.0
+        elif (
+            self._snake_position[0] >= self.size
+            or self._snake_position[0] < 0
+            or self._snake_position[1] >= self.size
+            or self._snake_position[1] < 0
+        ):
+            self.game_over = True
+            score = -50.0
+        else:
+            self.game_over = False
+            score = self.manhattan_distance()
+            score = -score
+
+        obs = self._get_obs()
+        reward = float(score)
         done = self.game_over
-        info = {}
+        info = self._get_info()
+
         return obs, reward, done, info
-    
-    def _generate_apple(self):
-        list_of_apples = []
-        for _ in range(self.num_apples):
-            apple_pos = [np.random.randint(0, self.width), np.random.randint(0, self.height)]
-            list_of_apples.append(apple_pos)
-        return list_of_apples
-    
-    # def _get_rewards(self):
-    #     # if len(self.apple_position) == 0:
-    #     #     # Reward for eating all apples (goal achieved)
-    #     #     reward = 5
-    #     if self.snake_position in self.apple_position:
-    #         # Reward for eating an apple
-    #         reward = 5
-    #         self.apple_position.remove(self.snake_position)
-    #     elif self.game_over:
-    #         # Penalty for hitting the wall
-    #         reward = -10
-    #     else:
-    #         # Small negative reward to encourage the agent to move and find apples
-    #         reward = -0.01
-    #     return reward
 
-    
-    def _get_states(self):
-        distances = [abs(self.snake_position[0] - apple_pos[0]) + abs(self.snake_position[1] - apple_pos[1]) for apple_pos in self.apple_position]
-        game_states = np.array([self.snake_position[0], self.snake_position[1], min(distances)], dtype=np.uint8)
-        return game_states
-        
-    
-    def render(self, mode='human', folder='snake_simulation'):
-        img = np.zeros((self.width, self.height), dtype=np.uint8)
+    def manhattan_distance(self):
+        """
+        Calculate the Manhattan distance between the snake and the apple.
+
+        Returns:
+            float: The Manhattan distance.
+        """
+        return float(np.sum(np.abs(self._snake_position - self._apple_position)))
+
+    def render(self, render_mode="human", folder="snake_simulation"):
+        """
+        Render the current state of the environment.
+
+        Args:
+            render_mode (str): The rendering mode ("human" or "rgb_array").
+            folder (str): The folder to save the rendered images.
+        """
+        self.render_mode = render_mode
         if not self.game_over:
-            img[self.snake_position[0]-1, self.snake_position[1]-1] = 5
-            for apple_pos in self.apple_position:
-                img[apple_pos[0]-1, apple_pos[1]-1] = 10
-        if mode == 'human':
-            os.makedirs(folder, exist_ok=True)
-            file_path = os.path.join(folder, f"snake_render_{self.steps}.png")
-            plt.figure(figsize=(6, 6))
-            plt.imshow(img)
-            plt.axis('off')
-            plt.savefig(file_path)
-            plt.close()
+            img = np.zeros((self.size, self.size, 3), dtype=np.uint8)
+            img[self._snake_position[0], self._snake_position[1], :] = (0, 255, 0)
+            img[self._apple_position[0], self._apple_position[1], :] = (255, 0, 0)
+            if self.render_mode == "rgb_array":
+                return img
+            elif self.render_mode == "human":
+                os.makedirs(folder, exist_ok=True)
+                file_path = os.path.join(folder, f"snake_render_{self.steps}.png")
+                plt.figure(figsize=(6, 6))
+                img = np.rot90(img)
+                plt.imshow(img, cmap="tab20", vmin=0, vmax=10)
+                plt.axis("off")
+                plt.savefig(file_path)
+                plt.close()
 
-if __name__ == '__main__':
-    env = SnakeEnv()
+if __name__ == "__main__":
+    env = SnakeGame()
     env.reset()
     total_reward = 0
 
-    for step in range(1000):
+    for i in range(150):
         action = env.action_space.sample()
         obs, reward, done, info = env.step(action)
         env.render()
-        print(f"Step: {step+1}, Action: {action}, Reward: {reward}")
+        print(f"Step: {i + 1}, Action: {action}, Reward: {reward}")
         total_reward += reward
         if done:
             break
-        env.render('human')
     print(f"Total reward: {total_reward}")
     check_env(env)
