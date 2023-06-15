@@ -8,7 +8,6 @@ from stable_baselines3.common.env_checker import check_env
 class SnakeGame(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"]}
 
-<<<<<<< HEAD:agent_game.py
 class MonitorEnv(gym.Env):
     metadata = {'render.modes': ['human']}
 
@@ -24,17 +23,6 @@ class MonitorEnv(gym.Env):
         self.target_position = [np.random.randint(0, self.width), np.random.randint(0, self.height)]
         
         self.score = 0
-=======
-    def __init__(self, size=40):
-        """
-        Initialize the SnakeGame environment.
-
-        Args:
-            size (int): The size of the game grid.
-        """
-        super(SnakeGame, self).__init__()
-        self.steps = 0
->>>>>>> 7b3c0cd69c07b9fa1021c6acc06078056f7300cf:snake_game.py
         self.game_over = False
         self.size = size
         # Observation are dictionaries with the snake's and the apple's location.
@@ -80,7 +68,6 @@ class MonitorEnv(gym.Env):
         return obs
 
     def step(self, action):
-<<<<<<< HEAD:agent_game.py
         # LEFT = 0, RIGHT = 1, DOWN = 2, UP = 3
         if action == 0:
             self.agent_position[0] -= 1
@@ -97,7 +84,6 @@ class MonitorEnv(gym.Env):
 
         if self.agent_position[0] < 0 or self.agent_position[0] >= self.width or \
                 self.agent_position[1] < 0 or self.agent_position[1] >= self.height:
-=======
         """
         Take a step in the environment based on the given action.
 
@@ -119,7 +105,6 @@ class MonitorEnv(gym.Env):
 
         # Check if game is over and calculate the score
         if np.array_equal(self._snake_position, self._apple_position):
->>>>>>> 7b3c0cd69c07b9fa1021c6acc06078056f7300cf:snake_game.py
             self.game_over = True
             score = 0.0
         elif (
@@ -147,25 +132,6 @@ class MonitorEnv(gym.Env):
 
         return obs, reward, done, info
 
-<<<<<<< HEAD:agent_game.py
-    def reset(self):
-        self.agent_position = [self.width // 2, self.height // 2]
-        self.target_position = [np.random.randint(0, self.width), np.random.randint(0, self.height)]
-        self.score = 0
-        self.game_over = False
-        return self.render('rgb_array')
-
-    def render(self, mode='human'):
-        img = np.zeros((self.width, self.height, 3), dtype=np.uint8)
-        if self.game_over == False:
-            img[self.agent_position[0], self.agent_position[1], :] = [0, 255, 0]
-            img[self.target_position[0], self.target_position[1], :] = [255, 0, 0]
-        if mode == 'rgb_array':
-            return img
-        elif mode == 'human':
-            from PIL import Image
-            return Image.fromarray(img)
-=======
     def manhattan_distance(self):
         """
         Calculate the Manhattan distance between the snake and the apple.
@@ -174,16 +140,11 @@ class MonitorEnv(gym.Env):
             float: The Manhattan distance.
         """
         return float(np.sum(np.abs(self._snake_position - self._apple_position)))
->>>>>>> 7b3c0cd69c07b9fa1021c6acc06078056f7300cf:snake_game.py
 
     def render(self, render_mode="human", folder="snake_simulation"):
         """
         Render the current state of the environment.
 
-<<<<<<< HEAD:agent_game.py
-if __name__ == '__main__':
-    env = MonitorEnv()
-=======
         Args:
             render_mode (str): The rendering mode ("human" or "rgb_array").
             folder (str): The folder to save the rendered images.
@@ -207,7 +168,6 @@ if __name__ == '__main__':
 
 if __name__ == "__main__":
     env = SnakeGame()
->>>>>>> 7b3c0cd69c07b9fa1021c6acc06078056f7300cf:snake_game.py
     env.reset()
     total_reward = 0
 
