@@ -1,8 +1,5 @@
 import gym
 import os
-from stable_baselines3 import A2C, DDPG, TD3, SAC, PPO
-from stable_baselines3.common.env_util import make_vec_env
-from snake_game import SnakeEnv
 import numpy as np
 import argparse
 import wandb
@@ -63,70 +60,33 @@ def parse_args():
    parser.add_argument('--model', type=str, default='ppo', help='ppo or a2c or dqn')
    return parser.parse_args()
 
-# PPO training
-log_dir = "ppo_logs/"
-os.makedirs(log_dir, exist_ok=True)
-env = SnakeEnv()
-env = Monitor(env, log_dir)
+args = parse_args()
+env = SnakeGame()
 
-print("PPO_run...")
-model = PPO("CnnPolicy", env, verbose=1, tensorboard_log="./tb_logs/")
-callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
-model.learn(total_timesteps=5e6, tb_log_name="PPO_run", callback=callback, progress_bar=True)
-
-
-# A2C training
-log_dir = "a2c_logs/"
-os.makedirs(log_dir, exist_ok=True)
-env = SnakeEnv()
-env = Monitor(env, log_dir)
-
-print("A2C_run...")
-model = A2C("CnnPolicy", env, verbose=1, tensorboard_log="./tb_logs/")
-callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
-model.learn(total_timesteps=5e6, tb_log_name="A2C_run", callback=callback, progress_bar=True)
-
-# # model.learn(total_timesteps=10_000, tb_log_name="second_run", reset_num_timesteps=False)
-
-# DDPG training
-log_dir = "ddpg_logs/"
-os.makedirs(log_dir, exist_ok=True)
-env = SnakeEnv()
-env = Monitor(env, log_dir)
-
-n_actions = env.action_space.shape[-1]
-action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
-
-print("DDPG_run...")
-model = DDPG("CnnPolicy", env, action_noise=action_noise, verbose=1, tensorboard_log="./tb_logs/")
-callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
-model.learn(total_timesteps=5e6, tb_log_name="DDPG_run", callback=callback, progress_bar=True)
-
-
-# TD3 training
-log_dir = "td3_logs/"
-os.makedirs(log_dir, exist_ok=True)
-env = SnakeEnv()
-env = Monitor(env, log_dir)
-
-n_actions = env.action_space.shape[-1]
-action_noise = NormalActionNoise(mean=np.zeros(n_actions), sigma=0.1 * np.ones(n_actions))
-
-print("TD3_run...")
-model = TD3("CnnPolicy", env, action_noise=action_noise, verbose=1, tensorboard_log="./tb_logs/")
-callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
-model.learn(total_timesteps=5e6, tb_log_name="TD3_run", callback=callback, progress_bar=True)
-
-
-# SAC training
-log_dir = "sac_logs/"
-os.makedirs(log_dir, exist_ok=True)
-env = SnakeEnv()
-env = Monitor(env, log_dir)
-
-print("SAC_run...")
-model = SAC("CnnPolicy", env, verbose=1, tensorboard_log="./tb_logs/")
-callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
-model.learn(total_timesteps=5e6, tb_log_name="SAC_run", callback=callback, progress_bar=True)
-
-
+if args.model == 'ppo':
+  wandb.init(project='Persistent Routing', name='PPO', sync_tensorboard=True)
+  log_dir = "logs/ppo_logs/"
+  os.makedirs(log_dir, exist_ok=True)
+  env = Monitor(env, log_dir)
+  print("PPO_Training................................")
+  callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
+  model = PPO("MultiInputPolicy", env, verbose=1, tensorboard_log="./tb_logs")
+  model.learn(total_timesteps=int(5e6), tb_log_name="PPO_run", callback=callback, progress_bar=True)
+elif args.model == 'a2c':
+   wandb.init(project='Persistent Routing', name='A2C', sync_tensorboard=True)
+   log_dir = "logs/a2c_logs/"
+   os.makedirs(log_dir, exist_ok=True)
+   env = Monitor(env, log_dir)
+   print("A2C_Training................................")
+   callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
+   model = A2C("MultiInputPolicy", env, verbose=1, tensorboard_log="./tb_logs")
+   model.learn(total_timesteps=int(5e6), tb_log_name="A2C_run", callback=callback, progress_bar=True)
+elif args.model == 'DQN':
+   wandb.init(project='Persistent Routing', name='DQN', sync_tensorboard=True)
+   log_dir = "logs/dqn_logs/"
+   os.makedirs(log_dir, exist_ok=True)
+   env = Monitor(env, log_dir)
+   print("DQN_Training................................")
+   callback = SaveOnBestTrainingRewardCallback(check_freq=1000, log_dir=log_dir)
+   model = DQN("MultiInputPolicy", env, verbose=1, tensorboard_log="./tb_logs")
+   model.learn(total_timesteps=int(5e6), tb_log_name="DQN_run", callback=callback, progress_bar=True)

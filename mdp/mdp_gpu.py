@@ -1,11 +1,13 @@
 import numpy as np
 from tqdm import tqdm
-from timeit import default_timer as timer  
+from numba import jit, cuda
+from timeit import default_timer as timer   
 
 # fix the number of targets 'n' and the maximum number of visits 'K' in each walk
-n = 5
-K = 7
+n = 2
+K = 4
 
+# @cuda.jit
 def combinations(lst_len, upr_lmt):
     '''
     takes the length of the list of targets and depot, and the upper limit of the clock and returns all possible clock combinations
@@ -39,7 +41,7 @@ def combinations(lst_len, upr_lmt):
                 final_lst.append([i] + j)
         return final_lst
 
-
+# @cuda.jit
 def transition_fxn(location, clocks, k_visited, action, K = K):
     '''
     generates the new location, updated clock readings and number of targets visited based on the current location, clocks readings,
@@ -84,6 +86,7 @@ def transition_fxn(location, clocks, k_visited, action, K = K):
     
     return location, clocks, k_visited
 
+# @cuda.jit
 def reward_fxn(location, clocks, k_visited, action, K = K):
     '''
     returns the reward based on the current location, clocks readings, number of targets visited and the action
@@ -120,7 +123,7 @@ def reward_fxn(location, clocks, k_visited, action, K = K):
         clocks += 1
         return max(clocks[1:]) # the reward is the maximum of the clock readings of all targets (except the depot)
     
-
+# @cuda.jit
 def value_iteration(v, delta, tol = 1e-6):
     '''
     performs value iteration to find the optimal value function and the optimal policy
@@ -148,12 +151,11 @@ def value_iteration(v, delta, tol = 1e-6):
     # set flag to 1 to signify that the value function has not converged
     flag = 1
     
-    progress = 0
+    # progress = 0
     # total_iterations = 10
     while flag == 1:
         flag = 0
-        progress += 1
-        print(f"Progress: {progress}")
+        # print(f"Progress: {progress}")
         for loc in loc_space:
             for clk in range(len(clock_space)):
                 for k in k_space:
@@ -223,31 +225,33 @@ def walk(loc, clk, k, opt_policy, K = K):
         print(f"New location: {loc}, Updated clock readings: {clk}, no. of targets visited: {k}")
         print('---------------------')
     return
-    
-# loc_space contains the possible locations. 0 represents the depot and 1 to n represent the targets
-loc_space = np.arange(n + 1)
 
-# k_space contains the possible number of targets visited
-k_space = np.arange(K + 1)
 
-# clock_space contains the possible clock readings. At index 0 is the clock reading of the depot and at
-# index i is the clock reading of target i
-clock_space = combinations(n + 1, K)
-clock_space = np.array(clock_space)
+if __name__ == "__main__":  
+    # loc_space contains the possible locations. 0 represents the depot and 1 to n represent the targets
+    loc_space = np.arange(n + 1)
 
-# action_space contains the possible actions, where action represents the location from loc_space to visit next.
-# 0 represents the depot and 1 to n represent the targets
-action_space = np.arange(n + 1)
+    # k_space contains the possible number of targets visited
+    k_space = np.arange(K + 1)
 
-start = timer()
-# initialize the value function to 0
-v = np.zeros((len(loc_space), len(clock_space), len(k_space)))
-opt_value, opt_policy = value_iteration(v, 0.9, tol = 1e-6)
-end = timer()
+    # clock_space contains the possible clock readings. At index 0 is the clock reading of the depot and at
+    # index i is the clock reading of target i
+    clock_space = combinations(n + 1, K)
+    clock_space = np.array(clock_space)
 
-# simulate the agent's walk for 20 steps
-loc0 = 0
-clk0 = np.zeros(n + 1)
-k0 = 0
-walk(loc0, clk0, k0, opt_policy)
-print("without GPU:", end-start)
+    # action_space contains the possible actions, where action represents the location from loc_space to visit next.
+    # 0 represents the depot and 1 to n represent the targets
+    action_space = np.arange(n + 1)
+
+    start = timer()
+    # initialize the value function to 0
+    v = np.zeros((len(loc_space), len(clock_space), len(k_space)))
+    opt_value, opt_policy = value_iteration(v, 0.9, tol = 1e-6)
+    end = timer()
+
+    # simulate the agent's walk for 20 steps
+    loc0 = 0
+    clk0 = np.zeros(n + 1)
+    k0 = 0
+    walk(loc0, clk0, k0, opt_policy)
+    print("with GPU:", end-start)

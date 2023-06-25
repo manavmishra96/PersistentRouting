@@ -8,21 +8,15 @@ from stable_baselines3.common.env_checker import check_env
 class SnakeGame(gym.Env):
     metadata = {"render_modes": ["human", "rgb_array"]}
 
-class MonitorEnv(gym.Env):
-    metadata = {'render.modes': ['human']}
+    def __init__(self, size=40):
+        """
+        Initialize the SnakeGame environment.
 
-    def __init__(self, width=40, height=40):
-        super(MonitorEnv, self).__init__()
-        
-        # Define game height and width
-        self.width = width
-        self.height = height
-
-        # Agent position and target position
-        self.agent_position = [self.width // 2, self.height // 2]
-        self.target_position = [np.random.randint(0, self.width), np.random.randint(0, self.height)]
-        
-        self.score = 0
+        Args:
+            size (int): The size of the game grid.
+        """
+        super(SnakeGame, self).__init__()
+        self.steps = 0
         self.game_over = False
         self.size = size
         # Observation are dictionaries with the snake's and the apple's location.
@@ -68,22 +62,6 @@ class MonitorEnv(gym.Env):
         return obs
 
     def step(self, action):
-        # LEFT = 0, RIGHT = 1, DOWN = 2, UP = 3
-        if action == 0:
-            self.agent_position[0] -= 1
-        elif action == 1:
-            self.agent_position[0] += 1
-        elif action == 2:
-            self.agent_position[1] -= 1
-        elif action == 3:
-            self.agent_position[1] += 1
-
-        if self.agent_position == self.target_position:
-            self.target_position = [np.random.randint(0, self.width), np.random.randint(0, self.height)]
-            self.score += 1
-
-        if self.agent_position[0] < 0 or self.agent_position[0] >= self.width or \
-                self.agent_position[1] < 0 or self.agent_position[1] >= self.height:
         """
         Take a step in the environment based on the given action.
 
@@ -120,13 +98,8 @@ class MonitorEnv(gym.Env):
             score = self.manhattan_distance()
             score = -score
 
-<<<<<<< HEAD:agent_game.py
-        obs = self.render('rgb_array')
-        reward = self.score
-=======
         obs = self._get_obs()
         reward = float(score)
->>>>>>> 7b3c0cd69c07b9fa1021c6acc06078056f7300cf:snake_game.py
         done = self.game_over
         info = self._get_info()
 
@@ -174,15 +147,10 @@ if __name__ == "__main__":
     for i in range(150):
         action = env.action_space.sample()
         obs, reward, done, info = env.step(action)
-<<<<<<< HEAD:agent_game.py
-        print(obs)
-        
-=======
         env.render()
         print(f"Step: {i + 1}, Action: {action}, Reward: {reward}")
         total_reward += reward
         if done:
             break
     print(f"Total reward: {total_reward}")
->>>>>>> 7b3c0cd69c07b9fa1021c6acc06078056f7300cf:snake_game.py
     check_env(env)

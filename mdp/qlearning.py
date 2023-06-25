@@ -6,6 +6,8 @@ from timeit import default_timer as timer
 n = 5
 K = 7
 
+T = 10
+
 def combinations(lst_len, upr_lmt):
     '''
     takes the length of the list of targets and depot, and the upper limit of the clock and returns all possible clock combinations
@@ -38,7 +40,6 @@ def combinations(lst_len, upr_lmt):
             for j in sub_lst:
                 final_lst.append([i] + j)
         return final_lst
-
 
 def transition_fxn(location, clocks, k_visited, action, K = K):
     '''
@@ -121,77 +122,64 @@ def reward_fxn(location, clocks, k_visited, action, K = K):
         return max(clocks[1:]) # the reward is the maximum of the clock readings of all targets (except the depot)
     
 
-def value_iteration(v, delta, tol = 1e-6):
-    '''
-    performs value iteration to find the optimal value function and the optimal policy
-
-    Parameters
-    ----------
-    v : numpy array
-        value function
-    delta : float
-        discount factor
-    tol : float, optional
-        tolerance. The default is 1e-6.
-
-    Returns
-    -------
-    v : numpy array
-        optimal value function
-    policy : numpy array
-        optimal policy
-    '''
+def qlearning(qtable, total_episodes, learning_rate, K, gamma):
+    # Exploration parameters
+    epsilon = 1.0                 # Exploration rate
+    max_epsilon = 1.0             # Exploration probability at start
+    min_epsilon = 0.01            # Minimum exploration probability 
+    decay_rate = 0.005            # Exponential decay rate for exploration prob
     
-    # initialize the policy matrix
-    policy = np.zeros((len(loc_space), len(clock_space), len(k_space)))
-
-    # set flag to 1 to signify that the value function has not converged
-    flag = 1
+   # List of rewards
+    rewards = []
     
-    progress = 0
-    # total_iterations = 10
-    while flag == 1:
-        flag = 0
-        progress += 1
-        print(f"Progress: {progress}")
-        for loc in loc_space:
-            for clk in range(len(clock_space)):
-                for k in k_space:
-                    best_value = np.inf
-                    for a in action_space:
-                        
-                        # create a copy of current clock readings
-                        times1, times2 = clock_space[clk].copy(), clock_space[clk].copy()
+    action_space = np.arange(n + 1)
 
-                        # get the new state
-                        loc_new, clk_new, k_new = transition_fxn(loc, times1, k, a)
-
-                        # get the reward
-                        reward = reward_fxn(loc, times2, k, a)
-                        
-                        # calculate the present value
-                        present_value = reward + delta*v[loc_new, np.where(np.all(clk_new == clock_space, axis = 1))[0][0], k_new]
-
-                        # if the current action is giving lower value than the previous best action, update the best value and action
-                        if present_value < best_value:
-                            best_value = present_value
-                            best_action = a
-                    
-                    # update the value function and policy
-                    change = np.abs(best_value - v[loc, clk, k])
-                    # print(f"Change : {change}")
-                    v[loc, clk, k] = best_value
-                    policy[loc, clk, k] = best_action
-
-                    error = np.min([tol, change])
-                    # check convergence condition
-                    if error >= tol:
-                        flag = 1
+    # 2 For life or until learning is stopped
+    for episode in range(total_episodes):
+        # Reset the environment
+        state = 0
+        step = 0
+        done = False
+        total_rewards = 0
+        
+        for step in range(K):
+            # 3. Choose an action a in the current world state (s)
+            ## First we randomize a number
+            exp_exp_tradeoff = np.random.uniform(0, 1)
             
-            # progress += 1
-            # pbar.update(1)
+            ## If this number > greater than epsilon --> exploitation (taking the biggest Q value for this state)
+            if exp_exp_tradeoff > epsilon:
+                action = np.argmax(qtable[state,:])
+                #print(exp_exp_tradeoff, "action", action)
 
-    return v, policy
+            # Else doing a random choice --> exploration
+            else:
+                action = np.random.choice(action_space[1:])
+                #print("action random", action)
+                
+            
+            # Take the action (a) and observe the outcome state(s') and reward (r)
+            new_state, reward, done, info = env.step(action)
+
+            # Update Q(s,a):= Q(s,a) + lr [R(s,a) + gamma * max Q(s',a') - Q(s,a)]
+            # qtable[new_state,:] : all the actions we can take from new state
+            qtable[state, action] = qtable[state, action] + learning_rate * (reward + gamma * np.max(qtable[new_state, :]) - qtable[state, action])
+            
+            total_rewards += reward
+            
+            # Our new state is state
+            state = new_state
+            
+            # If done (if we're dead) : finish episode
+            if done == True: 
+                break
+            
+    # Reduce epsilon (because we need less and less exploration)
+    epsilon = min_epsilon + (max_epsilon - min_epsilon)*np.exp(-decay_rate*episode) 
+    rewards.append(total_rewards)
+    
+    return qtable, rewards
+    
 
 def walk(loc, clk, k, opt_policy, K = K):
     '''
@@ -224,30 +212,39 @@ def walk(loc, clk, k, opt_policy, K = K):
         print('---------------------')
     return
     
-# loc_space contains the possible locations. 0 represents the depot and 1 to n represent the targets
-loc_space = np.arange(n + 1)
 
-# k_space contains the possible number of targets visited
-k_space = np.arange(K + 1)
+if __name__ == "__main__":
+    # loc_space contains the possible locations. 0 represents the depot and 1 to n represent the targets
+    loc_space = np.arange(n + 1)
 
-# clock_space contains the possible clock readings. At index 0 is the clock reading of the depot and at
-# index i is the clock reading of target i
-clock_space = combinations(n + 1, K)
-clock_space = np.array(clock_space)
+    # k_space contains the possible number of targets visited
+    k_space = np.arange(K + 1)
 
-# action_space contains the possible actions, where action represents the location from loc_space to visit next.
-# 0 represents the depot and 1 to n represent the targets
-action_space = np.arange(n + 1)
+    # clock_space contains the possible clock readings. At index 0 is the clock reading of the depot and at
+    # index i is the clock reading of target i
+    clock_space = combinations(n + 1, T)
+    clock_space = np.array(clock_space)
 
-start = timer()
-# initialize the value function to 0
-v = np.zeros((len(loc_space), len(clock_space), len(k_space)))
-opt_value, opt_policy = value_iteration(v, 0.9, tol = 1e-6)
-end = timer()
+    # action_space contains the possible actions, where action represents the location from loc_space to visit next.
+    # 0 represents the depot and 1 to n represent the targets
+    action_space = np.arange(n + 1)
 
-# simulate the agent's walk for 20 steps
-loc0 = 0
-clk0 = np.zeros(n + 1)
-k0 = 0
-walk(loc0, clk0, k0, opt_policy)
-print("without GPU:", end-start)
+    # initialize the q function to 0
+    q = np.zeros((len(loc_space), len(clock_space), len(k_space), len(action_space)))
+    q = q.reshape(-1, q.shape[-1])
+    
+    state_size = len(loc_space) * len(clock_space) * len(k_space)
+    action_size = len(action_space)
+    
+    qtable_init = np.zeros((state_size, action_size))
+    
+    qtable, rewards = qlearning(qtable_init, 20000, 0.7, K, 0.95)
+    print ("Score over time: " +  str(sum(rewards)/20000))
+    print(qtable)
+
+    # simulate the agent's walk for 20 steps
+    loc0 = 0
+    clk0 = np.zeros(n + 1)
+    k0 = 0
+    walk(loc0, clk0, k0, opt_policy)
+    print("without GPU:", end-start)
