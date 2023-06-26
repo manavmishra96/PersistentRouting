@@ -3,7 +3,7 @@ from tqdm import tqdm
 from timeit import default_timer as timer  
 
 # fix the number of targets 'n' and the maximum number of visits 'K' in each walk
-n = 5
+n = 3
 K = 7
 
 def combinations(lst_len, upr_lmt):
@@ -66,11 +66,10 @@ def transition_fxn(location, clocks, k_visited, action, K = K):
         updated number of targets visited
     '''
     # increment each clock by 1
-    clocks += 1
-
-    # if any clock reading exceeds the upper limit, clip it to the upper limit
-    clocks = np.clip(clocks, a_min = 0, a_max = K)
-
+    global poses
+    
+    init_location = location
+    
     # when the number of visits has become equal to the maximum number of visits, the agent can only go to the depot
     if k_visited == K:
         k_visited = 0
@@ -80,9 +79,20 @@ def transition_fxn(location, clocks, k_visited, action, K = K):
         k_visited += 1
         location = action
         
+    final_location = location
+    
+    d = np.linalg.norm(poses[init_location] - poses[final_location])
+    d = d.astype(np.int64)
+    
+    clocks += d
+
+    # if any clock reading exceeds the upper limit, clip it to the upper limit
+    clocks = np.clip(clocks, a_min = 0, a_max = K)
+        
     clocks[location] = 0 # reset the clock reading of the new location to 0
     
     return location, clocks, k_visited
+
 
 def reward_fxn(location, clocks, k_visited, action, K = K):
     '''
@@ -212,15 +222,18 @@ def walk(loc, clk, k, opt_policy, K = K):
     -------
     None.
     '''
+    global poses, loc_space
 
     counter = 0
     while counter < 15:
         counter += 1
-        print(f"Current location: {loc}, Current clock readings: {clk}, no. of targets visited: {k}")
+        dist = [np.linalg.norm(poses[loc] - poses[l]) for l in loc_space]
+        print(f"Current location: {loc}, Current clock readings: {clk}, Distance to each target: {dist}, no. of targets visited: {k}")
         action = int(opt_policy[loc, np.where(np.all(clk == clock_space, axis = 1))[0][0], k])
         print("Optimal action: ", action)
         loc, clk, k = transition_fxn(loc, clk, k, action)
-        print(f"New location: {loc}, Updated clock readings: {clk}, no. of targets visited: {k}")
+        dist = [np.linalg.norm(poses[loc] - poses[l]) for l in loc_space]
+        print(f"New location: {loc}, Updated clock readings: {clk}, Updated distances: {dist}, no. of targets visited: {k}")
         print('---------------------')
     return
     
@@ -234,6 +247,10 @@ k_space = np.arange(K + 1)
 # index i is the clock reading of target i
 clock_space = combinations(n + 1, K)
 clock_space = np.array(clock_space)
+
+# create distance poses
+poses = np.zeros((len(loc_space), 2))
+poses[:, 0] = loc_space
 
 # action_space contains the possible actions, where action represents the location from loc_space to visit next.
 # 0 represents the depot and 1 to n represent the targets
